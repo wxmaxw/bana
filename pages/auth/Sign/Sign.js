@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Alert, SafeAreaView, Text } from "react-native";
 import { Formik } from "formik";
+import * as Yup from 'yup';
 
 import styles from "./Sign.style";
 import Input from "../../../src/components/Input";
@@ -20,8 +21,13 @@ const errorMessage = {
   500: "Hay aksi birşeyler yanlış gitti.",
 };
 
-const Sign = ({ navigation }) => {
+const validationSchema = Yup.object().shape({
+  name: Yup.string().required("Ad-Soyad gerekli"),
+  phone: Yup.string().required("Telefon gerekli"),
+  password: Yup.string().required("Şifre gerekli"),
+});
 
+const Sign = ({ navigation }) => {
   const { post, response, error } = usePost(errorMessage);
 
   const handleLogin = () => {
@@ -29,8 +35,7 @@ const Sign = ({ navigation }) => {
   };
 
   const handleFormSubmit = async (formValues) => {
-    // API isteği için doğru yapıyı gönderiyoruz
-    const payload = {
+    const payload = {   //Endpoint tek url olduğu için api değerleri üzerinden ayrışıyorlar
       api: "/user/register",
       data: {
         name: formValues.name,
@@ -40,10 +45,10 @@ const Sign = ({ navigation }) => {
     };
 
     await post(signUrl, payload);
+  };
 
-    console.log("Response in SignPage", response); //Test için yazdım
-
-    if (response) {
+  useEffect(() => {
+    if (response && response.status == 200) {
       Alert.alert(
         "Başarıyla kayıt oldunuz, sms ile hesabınızı doğrulayınız.",
         "",
@@ -51,43 +56,41 @@ const Sign = ({ navigation }) => {
           {
             text: "Tamam",
             onPress: () => {
-              handleLogin(); // `handleLogin` fonksiyonunu çağırır
+              navigation.navigate("LoginPage");
             },
           },
         ]
       );
     }
-
-    /* ALERTIN YAPISI
-    Alert.alert(
-    title, // (1) Başlık
-    message, // (2) Mesaj
-    buttons, // (3) Butonlar
-    options // (4) Opsiyonel seçenekler
-);
- */
-
-    if (error) {
-      Alert.alert("Başarısız", error);
-    }       
-    console.log("Error in SignPage:", error);
-  };
+    
+    else if (response && errorMessage[response.status]) {
+      Alert.alert("Başarısız", errorMessage[response.status]);
+    }else if(error){
+      Alert.alert("Başarısız", "Ups!");
+    }
+  }, [response, error, navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>bana ne ?</Text>
-      <Formik initialValues={initialForm} onSubmit={handleFormSubmit}>
+      <Text style={styles.header}>Kayıt Ol</Text>
+      <Formik
+        initialValues={initialForm} //initialForm bir nesne
+        validationSchema={validationSchema}
+        onSubmit={handleFormSubmit}  //Form gönderildiğinde çalışacak fonksiyonu belirler.
+      >
         {({ values, handleChange, handleSubmit}) => (
           <>
             <Input
               value={values.name}
               placeholder="Ad-Soyad giriniz..."
               onType={handleChange("name")}
+    
             />
             <Input
               value={values.phone}
               placeholder="Telefon numaranızı giriniz..."
-              onType={handleChange("phone")} //onChangeText
+              onType={handleChange("phone")}
+              
             />
             <Input
               value={values.password}
